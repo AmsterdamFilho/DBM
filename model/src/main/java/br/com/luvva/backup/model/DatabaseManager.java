@@ -7,7 +7,9 @@ import java.nio.file.Path;
  */
 public interface DatabaseManager
 {
-    void backup (Path backupPath) throws Exception;
+    void backup (Path backupDirectory) throws Exception;
+
+    void drop () throws Exception;
 
     void restore (Path backupPath);
 }

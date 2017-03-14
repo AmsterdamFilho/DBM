@@ -26,53 +26,66 @@ public class PostgresManager implements DatabaseManager
     private @Inject Logger               logger;
     private @Inject PathPreferences      pathPreferences;
 
+    //<editor-fold desc="Backup">
+
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmm");
 
     @Override
-    public void backup (Path backupPath) throws Exception
+    public void backup (Path backupDirectory) throws Exception
     {
-        Files.createDirectories(backupPath);
-        ProcessBuilder pb = new ProcessBuilder(buildBackupCommand());
-        //noinspection SpellCheckingInspection
-        pb.environment().put("PGPASSWORD", connectionParameters.getPassword());
-        pb.redirectErrorStream(true);
-        Process backupProcess = pb.start();
-        MyInputStreamReader reader = new MyInputStreamReader(backupProcess.getInputStream());
-        reader.start();
+        Files.createDirectories(backupDirectory);
+        Process backupProcess = createProcess(executablePath("pg_dump"));
+        Path backupFilePath = backupSqlFile(backupDirectory);
+        InputStreamExporter exporter = new InputStreamExporter(backupProcess.getInputStream(), backupFilePath);
+        exporter.start();
         int result = backupProcess.waitFor();
-        if (result != 0)
+        if (result == 0)
         {
-            try (PrintWriter out = new PrintWriter(backupErrorFile()))
-            {
-                out.write(reader.getOutput());
-            }
-            throw new IOException("Backup process returned an error: " + result);
+            logger.info("Backup " + backupFilePath.toString() + " created successfully.");
         }
         else
         {
-            try (PrintWriter out = new PrintWriter(backupSqlFile(backupPath), "utf-8"))
-            {
-                out.write(reader.getOutput());
-            }
-            logger.info("Backup " + backupSqlFile(backupPath).getName() + " created successfully.");
+            Path errorFile = errorFile(sdf.format(new Date()) + "-backupError");
+            Files.move(backupFilePath, errorFile);
+            throw new IOException("Error executing backup! The file " + errorFile.toString() + " has the details.");
         }
     }
 
-    private List<String> buildBackupCommand () throws IOException
+    private Path backupSqlFile (Path backupPath)
     {
-        List<String> response = new ArrayList<>();
-        response.add(pg_dumpPath().toString());
-        response.add("--port");
-        response.add(connectionParameters.getPort());
-        response.add("--username");
-        response.add(connectionParameters.getUser());
-        response.add("--host");
-        response.add("localhost");
-        response.add(connectionParameters.getDatabase());
-        return response;
+        return backupPath.resolve(sdf.format(new Date()) + ".sql");
     }
 
-    private Path pg_dumpPath () throws IOException
+    //</editor-fold>
+
+    //<editor-fold desc="Drop">
+
+    @Override
+    public void drop () throws Exception
+    {
+
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="Restore">
+
+    @Override
+    public void restore (Path backupPath)
+    {
+
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="Utilities">
+
+    private Path errorFile (String name)
+    {
+        return pathPreferences.getAppDataDirectory().resolve(name + ".txt");
+    }
+
+    private String executablePath (String executable) throws IOException
     {
         String binFolderPathString = postgresInfo.getBinFolderPath();
         if (StringUtils.isNullOrEmpty(binFolderPathString))
@@ -80,70 +93,69 @@ public class PostgresManager implements DatabaseManager
             throw new IOException("Postgres info bin folder path string is empty!");
         }
         Path binFolder = Paths.get(binFolderPathString);
-        Path pg_dumpPath;
+        Path response;
         if (SystemUtils.isWindows())
         {
-            pg_dumpPath = binFolder.resolve("pg_dump.exe");
+            response = binFolder.resolve(executable + ".exe");
         }
         else
         {
-            pg_dumpPath = binFolder.resolve("pg_dump");
+            response = binFolder.resolve(executable);
         }
-        if (Files.notExists(pg_dumpPath))
+        if (Files.notExists(response))
         {
-            throw new IOException("pg_dump not found in bin directory!");
+            throw new IOException(executable + " not found in bin directory!");
         }
-        return pg_dumpPath;
+        return response.toString();
     }
 
-    private File backupSqlFile (Path backupPath)
+    private class InputStreamExporter extends Thread
     {
-        return backupPath.resolve(sdf.format(new Date()) + ".sql").toFile();
-    }
-
-    private File backupErrorFile ()
-    {
-        return pathPreferences.getAppDataDirectory().resolve("backupError.txt").toFile();
-    }
-
-    private class MyInputStreamReader extends Thread
-    {
-        private StringBuilder sb = new StringBuilder();
         private InputStream inputStream;
+        private Path        filePath;
 
-        private MyInputStreamReader (InputStream inputStream)
+        private InputStreamExporter (InputStream inputStream, Path filePath)
         {
             this.inputStream = inputStream;
-        }
-
-        private String getOutput ()
-        {
-            return sb.toString();
+            this.filePath = filePath;
         }
 
         @Override
         public void run ()
         {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            String line;
-            try
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+                 BufferedWriter bw = new BufferedWriter(new FileWriter(filePath.toFile())))
             {
-                while ((line = reader.readLine()) != null)
+                String line;
+                while ((line = br.readLine()) != null)
                 {
-                    sb.append(line).append("\n");
+                    bw.write(line + "\n");
                 }
-                reader.close();
             }
             catch (IOException e)
             {
-                logger.error("Could not read process input stream", e);
+                logger.error("Could not write input stream to file.", e);
             }
         }
     }
 
-    @Override
-    public void restore (Path backupPath)
+    private Process createProcess (String executable) throws IOException
     {
-
+        List<String> command = new ArrayList<>();
+        command.add(executable);
+        command.add("--port");
+        command.add(connectionParameters.getPort());
+        command.add("--username");
+        command.add(connectionParameters.getUser());
+        command.add("--host");
+        command.add("localhost");
+        command.add(connectionParameters.getDatabase());
+        ProcessBuilder pb = new ProcessBuilder(command);
+        //noinspection SpellCheckingInspection
+        pb.environment().put("PGPASSWORD", connectionParameters.getPassword());
+        pb.redirectErrorStream(true);
+        return pb.start();
     }
+
+    //</editor-fold>
 }
