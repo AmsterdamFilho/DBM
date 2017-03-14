@@ -3,10 +3,10 @@ package br.com.luvva.backup.service;
 /**
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
  */
-public class MyBackupErrorHandler implements BackupErrorHandler
+public class ServiceTestAutomaticBackupListener implements AutomaticBackupListener
 {
     @Override
-    public void handleError ()
+    public void exceptionOccurred ()
     {
         System.out.println("Backup error!");
     }

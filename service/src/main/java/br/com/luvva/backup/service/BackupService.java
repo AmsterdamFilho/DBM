@@ -20,32 +20,32 @@ import java.util.TimerTask;
  */
 @Singleton
 @Default
-class BackupService
+public class BackupService
 {
-    private @Inject BackupAgenda       agenda;
-    private @Inject Logger             logger;
-    private @Inject BackupErrorHandler errorHandler;
+    private @Inject BackupAgenda            agenda;
+    private @Inject Logger                  logger;
+    private @Inject AutomaticBackupListener errorHandler;
 
-    private Timer timer = new Timer();
+    private Timer backupTimer         = new Timer();
+    private Timer agendaUpdateChecker = new Timer("AgendaUpdateChecker");
 
-    void start ()
+    public void start ()
     {
-        Timer timer = new Timer("AgendaUpdateChecker", false);
         int oneMinute = 60 * 1000;
-        timer.schedule(new AgendaUpdateChecker(), oneMinute, oneMinute);
+        agendaUpdateChecker.schedule(new AgendaUpdateChecker(), oneMinute, oneMinute);
         schedule();
     }
 
     private void schedule ()
     {
-        timer.cancel();
+        backupTimer.cancel();
         final String backupFolder = agenda.getBackupFolder();
-        if (!(backupFolder == null || backupFolder.trim().isEmpty()))
+        LocalDateTime nextSchedule = agenda.next();
+        if (!(backupFolder == null || backupFolder.trim().isEmpty() || nextSchedule == null))
         {
-            timer = new Timer("backupTask", false);
-            LocalDateTime next = agenda.next();
-            logger.info("Backup scheduled to " + next.toString());
-            timer.schedule(new TimerTask()
+            backupTimer = new Timer("backupTimer");
+            logger.info("Backup scheduled to " + nextSchedule.toString());
+            backupTimer.schedule(new TimerTask()
             {
                 @Override
                 public void run ()
@@ -57,12 +57,22 @@ class BackupService
                     catch (Exception e)
                     {
                         logger.error("Backup exception!", e);
-                        errorHandler.handleError();
+                        errorHandler.exceptionOccurred();
                     }
                     schedule();
                 }
-            }, Date.from(next.atZone(ZoneId.systemDefault()).toInstant()));
+            }, Date.from(nextSchedule.atZone(ZoneId.systemDefault()).toInstant()));
         }
+        else
+        {
+            logger.info("Agenda is empty or backup directory is not set. Awaiting agenda update...");
+        }
+    }
+
+    public void exit ()
+    {
+        agendaUpdateChecker.cancel();
+        backupTimer.cancel();
     }
 
     private class AgendaUpdateChecker extends TimerTask
