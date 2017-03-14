@@ -12,14 +12,29 @@ import java.util.List;
 @Custom
 public class BackupAgenda
 {
-    private List<BackupSchedule> schedules = new ArrayList<>();
-
-    private int    version;
-    private String backupFolder;
+    private List<BackupSchedule> schedules;
+    private int                  version;
+    private String               backupFolder;
 
     public List<BackupSchedule> getSchedules ()
     {
+        if (schedules == null)
+        {
+            schedules = new ArrayList<>();
+        }
         return schedules;
+    }
+
+    public void setSchedules (List<BackupSchedule> schedules)
+    {
+        if (schedules == null)
+        {
+            this.schedules = new ArrayList<>();
+        }
+        else
+        {
+            this.schedules = schedules;
+        }
     }
 
     public int getVersion ()
@@ -44,7 +59,7 @@ public class BackupAgenda
 
     public LocalDateTime next ()
     {
-        if (schedules.isEmpty())
+        if (schedules == null || schedules.isEmpty())
         {
             return null;
         }

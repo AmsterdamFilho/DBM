@@ -23,5 +23,6 @@ public class PostgresInfoFactory extends PreferencesFactoryFromXml<PostgresInfo>
     @Override
     protected void setDefaultPreferences (PostgresInfo info)
     {
+        info.setBinFolderPath("");
     }
 }

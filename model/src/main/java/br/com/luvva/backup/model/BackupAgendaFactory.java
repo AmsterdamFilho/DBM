@@ -7,6 +7,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
@@ -25,11 +27,14 @@ public class BackupAgendaFactory extends PreferencesFactoryFromXml<BackupAgenda>
     @Override
     protected void setDefaultPreferences (BackupAgenda agenda)
     {
-        agenda.getSchedules().add(new BackupSchedule(DayOfWeek.MONDAY, LocalTime.NOON));
-        agenda.getSchedules().add(new BackupSchedule(DayOfWeek.TUESDAY, LocalTime.NOON));
-        agenda.getSchedules().add(new BackupSchedule(DayOfWeek.WEDNESDAY, LocalTime.NOON));
-        agenda.getSchedules().add(new BackupSchedule(DayOfWeek.THURSDAY, LocalTime.NOON));
-        agenda.getSchedules().add(new BackupSchedule(DayOfWeek.FRIDAY, LocalTime.NOON));
-        agenda.getSchedules().add(new BackupSchedule(DayOfWeek.SATURDAY, LocalTime.NOON));
+        List<BackupSchedule> schedules = new ArrayList<>();
+        schedules.add(new BackupSchedule(DayOfWeek.MONDAY, LocalTime.NOON));
+        schedules.add(new BackupSchedule(DayOfWeek.TUESDAY, LocalTime.NOON));
+        schedules.add(new BackupSchedule(DayOfWeek.WEDNESDAY, LocalTime.NOON));
+        schedules.add(new BackupSchedule(DayOfWeek.THURSDAY, LocalTime.NOON));
+        schedules.add(new BackupSchedule(DayOfWeek.FRIDAY, LocalTime.NOON));
+        schedules.add(new BackupSchedule(DayOfWeek.SATURDAY, LocalTime.NOON));
+        agenda.setSchedules(schedules);
+        agenda.setBackupFolder("");
     }
 }
