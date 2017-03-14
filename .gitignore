@@ -1,6 +1,7 @@
 .idea
 *.iml
 
+demo/target
 model/target
 service/target
 test/target
