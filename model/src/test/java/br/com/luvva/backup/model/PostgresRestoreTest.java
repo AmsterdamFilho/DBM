@@ -2,6 +2,7 @@ package br.com.luvva.backup.model;
 
 import br.com.jwheel.cdi.WeldContext;
 import br.com.jwheel.logging.JwLoggerFactory;
+import br.com.luvva.backup.test.MyPathPreferences;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -9,9 +10,10 @@ import javax.inject.Inject;
 /**
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
  */
-public class RestoreTest
+public class PostgresRestoreTest
 {
-    private @Inject JwLoggerFactory loggerFactory;
+    private @Inject JwLoggerFactory   loggerFactory;
+    private @Inject MyPathPreferences pathPreferences;
 
     @PostConstruct
     private void init ()
@@ -21,6 +23,7 @@ public class RestoreTest
         try
         {
             postgresManager.drop();
+            postgresManager.restore(pathPreferences.getAppDataDirectory().resolve("backup.sql"));
         }
         catch (Exception e)
         {
@@ -30,6 +33,6 @@ public class RestoreTest
 
     public static void main (String[] args)
     {
-        WeldContext.getInstance().getAny(RestoreTest.class);
+        WeldContext.getInstance().getAny(PostgresRestoreTest.class);
     }
 }

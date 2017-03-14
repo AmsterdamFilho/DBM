@@ -11,5 +11,5 @@ public interface DatabaseManager
 
     void drop () throws Exception;
 
-    void restore (Path backupPath);
+    void restore (Path backupPath) throws Exception;
 }

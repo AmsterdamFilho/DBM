@@ -99,9 +99,34 @@ public class PostgresManager implements DatabaseManager
     //<editor-fold desc="Restore">
 
     @Override
-    public void restore (Path backupPath)
+    public void restore (Path backupPath) throws Exception
     {
+        Process psql = startProcess(executablePath("psql"), restoreCommand(backupPath.toString()));
+        Path errorFile = errorFile(sdf.format(new Date()) + "-restoreError");
+        InputStreamExporter exporter = new InputStreamExporter(psql.getInputStream(), errorFile);
+        exporter.start();
+        int result = psql.waitFor();
+        if (result == 0)
+        {
+            try
+            {
+                Files.delete(errorFile);
+            }
+            catch (IOException e)
+            {
+                logger.warn("Could not delete temp file with the output of psql in restore routine!", e);
+            }
+            logger.info("Restore routine finished successfully.");
+        }
+        else
+        {
+            throw new IOException("Error in restoring routine! The file " + errorFile.toString() + " has the details.");
+        }
+    }
 
+    private String[] restoreCommand (String filePath)
+    {
+        return new String[]{"--file", filePath};
     }
 
     //</editor-fold>
@@ -120,16 +145,16 @@ public class PostgresManager implements DatabaseManager
         {
             throw new IOException("Postgres info bin folder path string is empty!");
         }
-        Path binFolder = Paths.get(binFolderPathString);
-        Path response;
+        String executableExtension;
         if (SystemUtils.isWindows())
         {
-            response = binFolder.resolve(executable + ".exe");
+            executableExtension = ".exe";
         }
         else
         {
-            response = binFolder.resolve(executable);
+            executableExtension = "";
         }
+        Path response = Paths.get(binFolderPathString).resolve(executable + executableExtension);
         if (Files.notExists(response))
         {
             throw new IOException(executable + " not found in bin directory!");
