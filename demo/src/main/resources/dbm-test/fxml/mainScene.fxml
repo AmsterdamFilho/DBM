@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.control.Button?>
+
+<StackPane xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="br.com.luvva.dbm.demo.DemoController" style="-fx-padding: 20">
+
+    <Button text="Restore backup.sql in application data directory" onAction="#restore"/>
+
+</StackPane>

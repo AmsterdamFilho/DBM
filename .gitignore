@@ -1,7 +1,7 @@
 .idea
 *.iml
 
+core/target
 demo/target
-model/target
 service/target
 test/target
