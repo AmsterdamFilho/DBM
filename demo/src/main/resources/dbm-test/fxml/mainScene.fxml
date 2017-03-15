@@ -4,9 +4,11 @@
 
 <?import javafx.scene.control.Button?>
 
-<StackPane xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="br.com.luvva.dbm.demo.DemoController" style="-fx-padding: 20">
+<VBox xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="br.com.luvva.dbm.demo.DemoController" style="-fx-padding: 20" spacing="10">
 
-    <Button text="Restore backup.sql in application data directory" onAction="#restore"/>
+    <Button text="Init database (new(db,user,password)=dbm, admin(db,user,password)=postgres)" onAction="#init"/>
 
-</StackPane>
+    <Button text="Restore backup.sql in application data directory" onAction="#dropAndRestore"/>
+
+</VBox>

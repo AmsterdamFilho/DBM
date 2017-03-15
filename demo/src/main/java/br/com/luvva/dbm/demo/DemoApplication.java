@@ -31,7 +31,7 @@ public class DemoApplication extends JavaFxApplication
         {
             backupService.start();
             Stage newPrimaryStage = new Stage();
-            newPrimaryStage.setTitle("Backup manager test");
+            newPrimaryStage.setTitle("Backup manager test (postgres)");
             newPrimaryStage.setScene(new Scene(JwFxmlLoader.loadWithCdi(
                     resourceProvider.getMainSceneFxml())));
             newPrimaryStage.centerOnScreen();

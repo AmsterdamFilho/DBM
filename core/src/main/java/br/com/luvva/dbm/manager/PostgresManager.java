@@ -1,5 +1,6 @@
 package br.com.luvva.dbm.manager;
 
+import br.com.jwheel.cdi.WeldContext;
 import br.com.jwheel.jpa.ConnectionParameters;
 import br.com.jwheel.utils.StringUtils;
 import br.com.jwheel.utils.SystemUtils;
@@ -25,10 +26,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class PostgresManager implements DatabaseManager
 {
-    private @Inject PostgresInfo         postgresInfo;
-    private @Inject ConnectionParameters connectionParameters;
-    private @Inject Logger               logger;
-    private @Inject PathPreferences      pathPreferences;
+    private @Inject PostgresInfo    postgresInfo;
+    private @Inject Logger          logger;
+    private @Inject PathPreferences pathPreferences;
 
     //<editor-fold desc="Backup">
 
@@ -38,7 +38,8 @@ public class PostgresManager implements DatabaseManager
     public void backup (Path backupDirectory) throws Exception
     {
         Files.createDirectories(backupDirectory);
-        Process backupProcess = startProcess(executablePath("pg_dump"));
+        ConnectionParameters connectionParameters = WeldContext.getInstance().getDefault(ConnectionParameters.class);
+        Process backupProcess = startProcess(connectionParameters, executablePath("pg_dump"));
         Path backupFilePath = backupSqlFile(backupDirectory);
         InputStreamExporter exporter = new InputStreamExporter(backupProcess.getInputStream(), backupFilePath);
         exporter.start();
@@ -62,67 +63,19 @@ public class PostgresManager implements DatabaseManager
 
     //</editor-fold>
 
-    //<editor-fold desc="Drop">
+    //<editor-fold desc="Drop and restore">
 
     @Override
-    public void drop () throws Exception
+    public void dropAndRestore (Path backupPath) throws Exception
     {
-        Process psql = startProcess(executablePath("psql"), dropCommand());
-        Path errorFile = errorFile(sdf.format(new Date()) + "-dropError");
-        InputStreamExporter exporter = new InputStreamExporter(psql.getInputStream(), errorFile);
-        exporter.start();
-        int result = psql.waitFor();
-        if (result == 0)
-        {
-            try
-            {
-                Files.delete(errorFile);
-            }
-            catch (IOException e)
-            {
-                logger.warn("Could not delete temp file with the output of psql in drop routine!", e);
-            }
-            logger.info("Drop routine finished successfully.");
-        }
-        else
-        {
-            throw new IOException("Error in dropping routine! The file " + errorFile.toString() + " has the details.");
-        }
+        ConnectionParameters cp = WeldContext.getInstance().getDefault(ConnectionParameters.class);
+        new PsqlRunner(cp, dropCommand(cp.getUser()), "drop").execute();
+        new PsqlRunner(cp, restoreCommand(backupPath.toString()), "restore").execute();
     }
 
-    private String[] dropCommand ()
+    private String[] dropCommand (String user)
     {
-        return new String[]{"--command", "DROP OWNED BY " + connectionParameters.getUser() + ";"};
-    }
-
-    //</editor-fold>
-
-    //<editor-fold desc="Restore">
-
-    @Override
-    public void restore (Path backupPath) throws Exception
-    {
-        Process psql = startProcess(executablePath("psql"), restoreCommand(backupPath.toString()));
-        Path errorFile = errorFile(sdf.format(new Date()) + "-restoreError");
-        InputStreamExporter exporter = new InputStreamExporter(psql.getInputStream(), errorFile);
-        exporter.start();
-        int result = psql.waitFor();
-        if (result == 0)
-        {
-            try
-            {
-                Files.delete(errorFile);
-            }
-            catch (IOException e)
-            {
-                logger.warn("Could not delete temp file with the output of psql in restore routine!", e);
-            }
-            logger.info("Restore routine finished successfully.");
-        }
-        else
-        {
-            throw new IOException("Error in restoring routine! The file " + errorFile.toString() + " has the details.");
-        }
+        return new String[]{"--command", "DROP OWNED BY " + user + ";"};
     }
 
     private String[] restoreCommand (String filePath)
@@ -132,7 +85,68 @@ public class PostgresManager implements DatabaseManager
 
     //</editor-fold>
 
+    //<editor-fold desc="Init">
+
+    @Override
+    public void init (ConnectionParameters cp, String user, String password, String database) throws Exception
+    {
+        new PsqlRunner(cp, createUserCommand(user, password), "createUser").execute();
+        new PsqlRunner(cp, createDatabaseCommand(user, database), "createDatabase").execute();
+    }
+
+    private String[] createUserCommand (String user, String password)
+    {
+        return new String[]{"--command", "CREATE USER " + user + " WITH PASSWORD '" + password + "';"};
+    }
+
+    private String[] createDatabaseCommand (String user, String database)
+    {
+        return new String[]{"--command", "CREATE DATABASE " + database + " OWNER " + user + ";"};
+    }
+
+    //</editor-fold>
+
     //<editor-fold desc="Utilities">
+
+    private class PsqlRunner
+    {
+        private ConnectionParameters cp;
+        private String[]             command;
+        private String               routine;
+
+        private PsqlRunner (ConnectionParameters cp, String[] command, String routine)
+        {
+            this.cp = cp;
+            this.command = command;
+            this.routine = routine;
+        }
+
+        private void execute () throws Exception
+        {
+            Process psql = startProcess(cp, executablePath("psql"), command);
+            Path errorFile = errorFile(sdf.format(new Date()) + routine + "Error");
+            InputStreamExporter exporter = new InputStreamExporter(psql.getInputStream(), errorFile);
+            exporter.start();
+            int result = psql.waitFor();
+            if (result == 0)
+            {
+                try
+                {
+                    Files.delete(errorFile);
+                }
+                catch (IOException e)
+                {
+                    logger.warn("Could not delete temp file with the output of psql in " + routine + " routine!", e);
+                }
+                logger.info(routine + " routine finished successfully.");
+            }
+            else
+            {
+                throw new IOException("Error in " + routine + " routine! " +
+                        "The file " + errorFile.toString() + " has the details.");
+            }
+        }
+    }
 
     private Path errorFile (String name)
     {
@@ -193,14 +207,14 @@ public class PostgresManager implements DatabaseManager
         }
     }
 
-    private Process startProcess (String executable, String... args) throws IOException
+    private Process startProcess (ConnectionParameters cp, String executable, String... args) throws IOException
     {
         List<String> command = new ArrayList<>();
         command.add(executable);
         command.add("--port");
-        command.add(connectionParameters.getPort());
+        command.add(cp.getPort());
         command.add("--username");
-        command.add(connectionParameters.getUser());
+        command.add(cp.getUser());
         command.add("--host");
         command.add("localhost");
         List<String> customCommands = Arrays.asList(args);
@@ -208,10 +222,10 @@ public class PostgresManager implements DatabaseManager
         {
             command.addAll(customCommands);
         }
-        command.add(connectionParameters.getDatabase());
+        command.add(cp.getDatabase());
         ProcessBuilder pb = new ProcessBuilder(command);
         //noinspection SpellCheckingInspection
-        pb.environment().put("PGPASSWORD", connectionParameters.getPassword());
+        pb.environment().put("PGPASSWORD", cp.getPassword());
         pb.redirectErrorStream(true);
         return pb.start();
     }

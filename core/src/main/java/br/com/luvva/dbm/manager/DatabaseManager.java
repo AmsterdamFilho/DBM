@@ -1,5 +1,7 @@
 package br.com.luvva.dbm.manager;
 
+import br.com.jwheel.jpa.ConnectionParameters;
+
 import java.nio.file.Path;
 
 /**
@@ -9,7 +11,7 @@ public interface DatabaseManager
 {
     void backup (Path backupDirectory) throws Exception;
 
-    void drop () throws Exception;
+    void dropAndRestore (Path backupPath) throws Exception;
 
-    void restore (Path backupPath) throws Exception;
+    void init (ConnectionParameters cp, String newUser, String newUserPassword, String newDatabase) throws Exception;
 }

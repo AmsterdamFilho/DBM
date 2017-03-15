@@ -23,8 +23,7 @@ public class PostgresRestoreTest
         PostgresManager postgresManager = WeldContext.getInstance().getAny(PostgresManager.class);
         try
         {
-            postgresManager.drop();
-            postgresManager.restore(pathPreferences.getAppDataDirectory().resolve("dbm.sql"));
+            postgresManager.dropAndRestore(pathPreferences.getAppDataDirectory().resolve("backup.sql"));
         }
         catch (Exception e)
         {

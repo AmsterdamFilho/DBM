@@ -1,5 +1,8 @@
 package br.com.luvva.dbm.demo;
 
+import br.com.jwheel.cdi.Custom;
+import br.com.jwheel.cdi.WeldContext;
+import br.com.jwheel.jpa.ConnectionParameters;
 import br.com.luvva.dbm.manager.DatabaseManager;
 import br.com.luvva.dbm.service.AutomaticBackupListener;
 import br.com.luvva.dbm.test.MyPathPreferences;
@@ -7,6 +10,7 @@ import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import org.slf4j.Logger;
 
+import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -20,21 +24,37 @@ public class DemoController implements AutomaticBackupListener
     private @Inject MyPathPreferences pathPreferences;
     private @Inject Logger            logger;
 
-    public void restore ()
+    public void dropAndRestore ()
     {
         try
         {
-            databaseManager.restore(pathPreferences.getAppDataDirectory().resolve("backup.sql"));
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Success Dialog");
-            alert.setHeaderText("Nice...");
-            alert.setContentText("Database has been restored!");
-            alert.showAndWait();
+            databaseManager.dropAndRestore(pathPreferences.getAppDataDirectory().resolve("backup.sql"));
+            showSuccessAlert("Database has been restored!");
         }
         catch (Exception e)
         {
-            showErrorAlert("Database restore was not successful!");
+            showErrorAlert("Database drop and restore was not successful!");
             logger.error("Error in restoring routine!", e);
+        }
+    }
+
+    public void init ()
+    {
+        try
+        {
+            ConnectionParameters cp = WeldContext.getInstance().getWithQualifiers(ConnectionParameters
+                    .class, new AnnotationLiteral<Custom>() {});
+            cp.setDriver("org.postgresql.Driver");
+            cp.setUrl("jdbc:postgresql://localhost:5432/postgres");
+            cp.setUser("postgres");
+            cp.setPassword("postgres");
+            databaseManager.init(cp, "dbm", "dbm", "dbm");
+            showSuccessAlert("Database init successful!");
+        }
+        catch (Exception e)
+        {
+            showErrorAlert("Database init was not successful!");
+            logger.error("Error in init routine!", e);
         }
     }
 
@@ -42,6 +62,15 @@ public class DemoController implements AutomaticBackupListener
     public void exceptionOccurred ()
     {
         Platform.runLater(() -> showErrorAlert("Error during automatic backup!"));
+    }
+
+    private void showSuccessAlert (String message)
+    {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Success Dialog");
+        alert.setHeaderText("Nice...");
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     private void showErrorAlert (String message)
