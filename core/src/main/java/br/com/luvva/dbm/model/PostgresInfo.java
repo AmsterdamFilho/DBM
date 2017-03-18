@@ -1,14 +1,20 @@
 package br.com.luvva.dbm.model;
 
-import br.com.jwheel.cdi.Custom;
-
 /**
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
  */
-@Custom
 public class PostgresInfo
 {
     private String binFolderPath;
+
+    public PostgresInfo ()
+    {
+    }
+
+    public PostgresInfo (String binFolderPath)
+    {
+        this.binFolderPath = binFolderPath;
+    }
 
     public String getBinFolderPath ()
     {

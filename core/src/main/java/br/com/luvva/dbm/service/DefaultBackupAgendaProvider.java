@@ -1,10 +1,8 @@
-package br.com.luvva.dbm.model;
+package br.com.luvva.dbm.service;
 
-import br.com.jwheel.xml.service.PreferencesFactoryFromXml;
+import br.com.luvva.dbm.model.BackupAgenda;
+import br.com.luvva.dbm.model.BackupSchedule;
 
-import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -13,20 +11,11 @@ import java.util.List;
 /**
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
  */
-@Singleton
-public class BackupAgendaFactory extends PreferencesFactoryFromXml<BackupAgenda>
+public class DefaultBackupAgendaProvider
 {
-    private @Inject BackupAgendaDao dao;
-
-    @Produces
-    private BackupAgenda produce ()
+    public BackupAgenda provide ()
     {
-        return produce(dao);
-    }
-
-    @Override
-    protected void setDefaultPreferences (BackupAgenda agenda)
-    {
+        BackupAgenda agenda = new BackupAgenda();
         List<BackupSchedule> schedules = new ArrayList<>();
         schedules.add(new BackupSchedule(DayOfWeek.MONDAY, LocalTime.NOON));
         schedules.add(new BackupSchedule(DayOfWeek.TUESDAY, LocalTime.NOON));
@@ -36,5 +25,6 @@ public class BackupAgendaFactory extends PreferencesFactoryFromXml<BackupAgenda>
         schedules.add(new BackupSchedule(DayOfWeek.SATURDAY, LocalTime.NOON));
         agenda.setSchedules(schedules);
         agenda.setBackupFolder("");
+        return agenda;
     }
 }

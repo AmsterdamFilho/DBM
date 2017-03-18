@@ -1,6 +1,8 @@
-package br.com.luvva.dbm.model;
+package br.com.luvva.dbm.dao;
 
 import br.com.jwheel.xml.dao.GenericXStreamDao;
+import br.com.luvva.dbm.model.BackupAgenda;
+import br.com.luvva.dbm.model.BackupSchedule;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.XStreamException;
 import com.thoughtworks.xstream.converters.ConversionException;

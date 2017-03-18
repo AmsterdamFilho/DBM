@@ -1,7 +1,6 @@
 package br.com.luvva.dbm.model;
 
-import br.com.jwheel.cdi.WeldContext;
-import br.com.jwheel.logging.JwLoggerFactory;
+import br.com.jwheel.weld.WeldContext;
 import br.com.luvva.dbm.manager.PostgresManager;
 import br.com.luvva.dbm.test.MyPathPreferences;
 
@@ -13,13 +12,11 @@ import javax.inject.Inject;
  */
 public class PostgresRestoreTest
 {
-    private @Inject JwLoggerFactory   loggerFactory;
     private @Inject MyPathPreferences pathPreferences;
 
     @PostConstruct
     private void init ()
     {
-        loggerFactory.init();
         PostgresManager postgresManager = WeldContext.getInstance().getAny(PostgresManager.class);
         try
         {

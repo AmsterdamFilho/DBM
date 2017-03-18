@@ -1,7 +1,5 @@
 package br.com.luvva.dbm.model;
 
-import br.com.jwheel.cdi.Custom;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +7,6 @@ import java.util.List;
 /**
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
  */
-@Custom
 public class BackupAgenda
 {
     private List<BackupSchedule> schedules;

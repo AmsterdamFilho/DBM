@@ -1,8 +1,5 @@
 package br.com.luvva.dbm.demo;
 
-import br.com.jwheel.cdi.Custom;
-import br.com.jwheel.cdi.WeldContext;
-import br.com.jwheel.jpa.ConnectionParameters;
 import br.com.luvva.dbm.manager.DatabaseManager;
 import br.com.luvva.dbm.service.AutomaticBackupListener;
 import br.com.luvva.dbm.test.MyPathPreferences;
@@ -10,7 +7,6 @@ import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import org.slf4j.Logger;
 
-import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -42,13 +38,7 @@ public class DemoController implements AutomaticBackupListener
     {
         try
         {
-            ConnectionParameters cp = WeldContext.getInstance().getWithQualifiers(ConnectionParameters
-                    .class, new AnnotationLiteral<Custom>() {});
-            cp.setDriver("org.postgresql.Driver");
-            cp.setUrl("jdbc:postgresql://localhost:5432/postgres");
-            cp.setUser("postgres");
-            cp.setPassword("postgres");
-            databaseManager.init(cp, "dbm", "dbm", "dbm");
+            databaseManager.init();
             showSuccessAlert("Database init successful!");
         }
         catch (Exception e)

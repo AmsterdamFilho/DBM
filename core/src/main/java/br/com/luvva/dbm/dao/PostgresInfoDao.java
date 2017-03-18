@@ -1,6 +1,7 @@
-package br.com.luvva.dbm.model;
+package br.com.luvva.dbm.dao;
 
 import br.com.jwheel.xml.dao.GenericXStreamDao;
+import br.com.luvva.dbm.model.PostgresInfo;
 import com.thoughtworks.xstream.XStream;
 
 /**

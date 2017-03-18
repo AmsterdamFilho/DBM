@@ -1,11 +1,12 @@
 package br.com.luvva.dbm.service;
 
-import br.com.jwheel.cdi.WeldContext;
-import br.com.luvva.dbm.model.BackupAgenda;
+import br.com.jwheel.weld.WeldContext;
+import br.com.jwheel.xml.model.FromXmlPreferences;
 import br.com.luvva.dbm.manager.DatabaseManager;
+import br.com.luvva.dbm.model.BackupAgenda;
 import org.slf4j.Logger;
 
-import javax.enterprise.inject.Default;
+import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.nio.file.Paths;
@@ -19,21 +20,24 @@ import java.util.TimerTask;
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
  */
 @Singleton
-@Default
 public class BackupService
 {
-    private @Inject BackupAgenda            agenda;
     private @Inject Logger                  logger;
     private @Inject AutomaticBackupListener errorHandler;
+    private @Inject DatabaseManager         databaseManager;
 
     private Timer backupTimer         = new Timer();
     private Timer agendaUpdateChecker = new Timer("AgendaUpdateChecker");
 
+    private BackupAgenda agenda;
+
     public void start ()
     {
+        agenda = getCurrentAgenda();
+        schedule();
+
         int oneMinute = 60 * 1000;
         agendaUpdateChecker.schedule(new AgendaUpdateChecker(), oneMinute, oneMinute);
-        schedule();
     }
 
     private void schedule ()
@@ -52,7 +56,7 @@ public class BackupService
                 {
                     try
                     {
-                        WeldContext.getInstance().getDefault(DatabaseManager.class).backup(Paths.get(backupFolder));
+                        databaseManager.backup(Paths.get(backupFolder));
                     }
                     catch (Exception e)
                     {
@@ -75,11 +79,18 @@ public class BackupService
         backupTimer.cancel();
     }
 
+    private BackupAgenda getCurrentAgenda ()
+    {
+        return WeldContext.getInstance().getWithQualifiers(BackupAgenda.class, new
+                AnnotationLiteral<FromXmlPreferences>() {});
+    }
+
     private class AgendaUpdateChecker extends TimerTask
     {
+        @Override
         public void run ()
         {
-            BackupAgenda current = WeldContext.getInstance().getDefault(BackupAgenda.class);
+            BackupAgenda current = getCurrentAgenda();
             if (current.getVersion() > agenda.getVersion())
             {
                 logger.info("Agenda version changed! Rescheduling...");

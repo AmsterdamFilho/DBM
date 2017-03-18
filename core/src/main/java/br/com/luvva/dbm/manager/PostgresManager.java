@@ -1,14 +1,17 @@
 package br.com.luvva.dbm.manager;
 
-import br.com.jwheel.cdi.WeldContext;
-import br.com.jwheel.jpa.ConnectionParameters;
+import br.com.jwheel.jpa.model.AdminDatabase;
+import br.com.jwheel.jpa.model.ConnectionParameters;
+import br.com.jwheel.jpa.model.ProductDatabase;
 import br.com.jwheel.utils.StringUtils;
 import br.com.jwheel.utils.SystemUtils;
+import br.com.jwheel.xml.model.FromXmlPreferences;
 import br.com.jwheel.xml.model.PathPreferences;
 import br.com.luvva.dbm.model.PostgresInfo;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,11 +27,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * @author Lima Filho, A. L. - amsterdam@luvva.com.br
  */
+@Singleton
 public class PostgresManager implements DatabaseManager
 {
-    private @Inject PostgresInfo    postgresInfo;
     private @Inject Logger          logger;
     private @Inject PathPreferences pathPreferences;
+
+    private @Inject @AdminDatabase      ConnectionParameters adminConnectionParameters;
+    private @Inject @ProductDatabase    ConnectionParameters productConnectionParameters;
+    private @Inject @FromXmlPreferences PostgresInfo         postgresInfo;
 
     //<editor-fold desc="Backup">
 
@@ -38,8 +45,7 @@ public class PostgresManager implements DatabaseManager
     public void backup (Path backupDirectory) throws Exception
     {
         Files.createDirectories(backupDirectory);
-        ConnectionParameters connectionParameters = WeldContext.getInstance().getDefault(ConnectionParameters.class);
-        Process backupProcess = startProcess(connectionParameters, executablePath("pg_dump"));
+        Process backupProcess = startProcess(productConnectionParameters, executablePath("pg_dump"));
         Path backupFilePath = backupSqlFile(backupDirectory);
         InputStreamExporter exporter = new InputStreamExporter(backupProcess.getInputStream(), backupFilePath);
         exporter.start();
@@ -68,9 +74,9 @@ public class PostgresManager implements DatabaseManager
     @Override
     public void dropAndRestore (Path backupPath) throws Exception
     {
-        ConnectionParameters cp = WeldContext.getInstance().getDefault(ConnectionParameters.class);
-        new PsqlRunner(cp, dropCommand(cp.getUser()), "drop").execute();
-        new PsqlRunner(cp, restoreCommand(backupPath.toString()), "restore").execute();
+        new PsqlRunner(productConnectionParameters,
+                dropCommand(productConnectionParameters.getUser()), "drop").execute();
+        new PsqlRunner(productConnectionParameters, restoreCommand(backupPath.toString()), "restore").execute();
     }
 
     private String[] dropCommand (String user)
@@ -88,10 +94,13 @@ public class PostgresManager implements DatabaseManager
     //<editor-fold desc="Init">
 
     @Override
-    public void init (ConnectionParameters cp, String user, String password, String database) throws Exception
+    public void init () throws Exception
     {
-        new PsqlRunner(cp, createUserCommand(user, password), "createUser").execute();
-        new PsqlRunner(cp, createDatabaseCommand(user, database), "createDatabase").execute();
+        String user = productConnectionParameters.getUser();
+        String password = productConnectionParameters.getPassword();
+        String database = productConnectionParameters.getDatabase();
+        new PsqlRunner(adminConnectionParameters, createUserCommand(user, password), "createUser").execute();
+        new PsqlRunner(adminConnectionParameters, createDatabaseCommand(user, database), "createDatabase").execute();
     }
 
     private String[] createUserCommand (String user, String password)
@@ -124,7 +133,7 @@ public class PostgresManager implements DatabaseManager
         private void execute () throws Exception
         {
             Process psql = startProcess(cp, executablePath("psql"), command);
-            Path errorFile = errorFile(sdf.format(new Date()) + routine + "Error");
+            Path errorFile = errorFile(sdf.format(new Date()) + "-" + routine + "Error");
             InputStreamExporter exporter = new InputStreamExporter(psql.getInputStream(), errorFile);
             exporter.start();
             int result = psql.waitFor();
