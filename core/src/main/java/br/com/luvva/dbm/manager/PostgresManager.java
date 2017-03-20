@@ -47,7 +47,8 @@ public class PostgresManager implements DatabaseManager
         Files.createDirectories(backupDirectory);
         Process backupProcess = startProcess(productConnectionParameters, executablePath("pg_dump"));
         Path backupFilePath = backupSqlFile(backupDirectory);
-        InputStreamExporter exporter = new InputStreamExporter(backupProcess.getInputStream(), backupFilePath);
+        InputStreamExporter exporter = new InputStreamExporter("InputStreamExporter backup thread",
+                backupProcess.getInputStream(), backupFilePath);
         exporter.start();
         int result = backupProcess.waitFor();
         if (result == 0)
@@ -134,7 +135,8 @@ public class PostgresManager implements DatabaseManager
         {
             Process psql = startProcess(cp, executablePath("psql"), command);
             Path errorFile = errorFile(sdf.format(new Date()) + "-" + routine + "Error");
-            InputStreamExporter exporter = new InputStreamExporter(psql.getInputStream(), errorFile);
+            InputStreamExporter exporter = new InputStreamExporter(
+                    routine + " inputStreamExporter psql thread", psql.getInputStream(), errorFile);
             exporter.start();
             int result = psql.waitFor();
             if (result == 0)
@@ -191,8 +193,9 @@ public class PostgresManager implements DatabaseManager
         private InputStream inputStream;
         private File        file;
 
-        private InputStreamExporter (InputStream inputStream, Path filePath)
+        private InputStreamExporter (String threadName, InputStream inputStream, Path filePath)
         {
+            super(threadName);
             this.inputStream = inputStream;
             this.file = filePath.toFile();
         }
